@@ -1,0 +1,54 @@
+{
+  "tables": [
+    {
+      "TableName": "Books",
+      "BillingMode": "PAY_PER_REQUEST",
+      "KeySchema": [
+        { "AttributeName": "bookId", "KeyType": "HASH" }
+      ],
+      "AttributeDefinitions": [
+        { "AttributeName": "bookId", "AttributeType": "S" }
+      ],
+      "Description": "Stores book records. Non-key attributes (title, author, genre, createdAt) are schemaless and do not need to be declared here.",
+      "Attributes": {
+        "bookId":    { "type": "String", "role": "Partition Key" },
+        "title":     { "type": "String", "role": "Attribute" },
+        "author":    { "type": "String", "role": "Attribute" },
+        "genre":     { "type": "String", "role": "Attribute" },
+        "createdAt": { "type": "String (ISO 8601)", "role": "Attribute" }
+      }
+    },
+    {
+      "TableName": "Reviews",
+      "BillingMode": "PAY_PER_REQUEST",
+      "KeySchema": [
+        { "AttributeName": "reviewId", "KeyType": "HASH" }
+      ],
+      "AttributeDefinitions": [
+        { "AttributeName": "reviewId", "AttributeType": "S" },
+        { "AttributeName": "bookId",   "AttributeType": "S" }
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "bookId-index",
+          "KeySchema": [
+            { "AttributeName": "bookId", "KeyType": "HASH" }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "Description": "Allows querying all reviews for a given bookId without a full table scan."
+        }
+      ],
+      "Description": "Stores review records linked to books via bookId. The GSI 'bookId-index' enables efficient per-book review lookups.",
+      "Attributes": {
+        "reviewId":     { "type": "String", "role": "Partition Key" },
+        "bookId":       { "type": "String", "role": "Attribute + GSI Partition Key" },
+        "reviewerName": { "type": "String", "role": "Attribute" },
+        "rating":       { "type": "Number (1–5)", "role": "Attribute" },
+        "comment":      { "type": "String", "role": "Attribute" },
+        "createdAt":    { "type": "String (ISO 8601)", "role": "Attribute" }
+      }
+    }
+  ]
+}
