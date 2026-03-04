@@ -1,0 +1,57 @@
+{
+  "books": [
+    {
+      "title": "The Pragmatic Programmer",
+      "author": "David Thomas & Andrew Hunt",
+      "genre": "Technology"
+    },
+    {
+      "title": "Dune",
+      "author": "Frank Herbert",
+      "genre": "Science Fiction"
+    },
+    {
+      "title": "Atomic Habits",
+      "author": "James Clear",
+      "genre": "Self-Help"
+    }
+  ],
+  "reviews": [
+    {
+      "bookTitle": "The Pragmatic Programmer",
+      "reviewerName": "Alice Johnson",
+      "rating": 5,
+      "comment": "An absolute must-read for any software developer. Timeless advice that still applies decades later."
+    },
+    {
+      "bookTitle": "The Pragmatic Programmer",
+      "reviewerName": "Bob Smith",
+      "rating": 4,
+      "comment": "Packed with practical tips. Some sections feel dated but the core concepts are solid."
+    },
+    {
+      "bookTitle": "Dune",
+      "reviewerName": "Carol White",
+      "rating": 5,
+      "comment": "A masterpiece of world-building. The political intrigue and ecological themes are unmatched."
+    },
+    {
+      "bookTitle": "Dune",
+      "reviewerName": "David Lee",
+      "rating": 4,
+      "comment": "Dense but rewarding. Takes patience to get into but absolutely worth it."
+    },
+    {
+      "bookTitle": "Atomic Habits",
+      "reviewerName": "Emma Davis",
+      "rating": 5,
+      "comment": "Changed how I approach building new habits. The 1% improvement concept is life-changing."
+    },
+    {
+      "bookTitle": "Atomic Habits",
+      "reviewerName": "Frank Miller",
+      "rating": 3,
+      "comment": "Good ideas but very repetitive. Could have been a long blog post instead of a full book."
+    }
+  ]
+}
