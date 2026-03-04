@@ -1,0 +1,254 @@
+{
+  "info": {
+    "name": "Book Review API",
+    "description": "A serverless REST API for managing books and reviews built with AWS Lambda, API Gateway, and DynamoDB",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://xt8enud8hc.execute-api.us-east-2.amazonaws.com/dev",
+      "description": "Base URL for the Book Review API"
+    },
+    {
+      "key": "bookId",
+      "value": "",
+      "description": "Populated automatically after Create Book request"
+    }
+  ],
+  "item": [
+    {
+      "name": "Books",
+      "item": [
+        {
+          "name": "Create Book",
+          "description": "Creates a new book entry. Automatically saves the returned bookId to the bookId collection variable for use in subsequent requests.",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/books",
+              "host": ["{{baseUrl}}"],
+              "path": ["books"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Dune\",\n  \"author\": \"Frank Herbert\",\n  \"genre\": \"Sci-Fi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has a bookId field\", function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property(\"bookId\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response title equals Dune\", function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.title).to.eql(\"Dune\");",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set(\"bookId\", json.bookId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All Books",
+          "description": "Retrieves all books stored in the DynamoDB Books table.",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/books",
+              "host": ["{{baseUrl}}"],
+              "path": ["books"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is an array\", function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.be.an(\"array\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Book by ID",
+          "description": "Retrieves a single book by its bookId. Uses the bookId collection variable set by the Create Book request.",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/books/{{bookId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{bookId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has a bookId field\", function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property(\"bookId\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Book",
+          "description": "Deletes a book and its associated reviews by bookId. Uses the bookId collection variable set by the Create Book request.",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/books/{{bookId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{bookId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has a message field\", function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property(\"message\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "Create Review",
+          "description": "Creates a new review for a specific book using the bookId collection variable. Rating must be a number between 1 and 5.",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/books/{{bookId}}/reviews",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{bookId}}", "reviews"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewerName\": \"Jane Doe\",\n  \"rating\": 5,\n  \"comment\": \"An absolute masterpiece. One of the greatest sci-fi novels ever written.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has a reviewId field\", function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property(\"reviewId\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response bookId matches collection variable bookId\", function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.bookId).to.eql(pm.collectionVariables.get(\"bookId\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Reviews by Book",
+          "description": "Retrieves all reviews for a specific book using the bookId collection variable. Queries the Reviews table via the bookId-index Global Secondary Index.",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/books/{{bookId}}/reviews",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{bookId}}", "reviews"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is an array\", function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.be.an(\"array\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
