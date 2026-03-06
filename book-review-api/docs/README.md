@@ -1,6 +1,20 @@
 # Book Review API
 
-A serverless REST API for managing books and their reviews, built with AWS Lambda, API Gateway, and DynamoDB.
+A serverless REST API for managing books and reviews, built with AWS Lambda, API Gateway, and DynamoDB.
+
+![Node.js](https://img.shields.io/badge/Node.js-22.x-339933?style=flat&logo=node.js&logoColor=white)
+![AWS Lambda](https://img.shields.io/badge/AWS-Lambda-FF9900?style=flat&logo=awslambda&logoColor=white)
+![DynamoDB](https://img.shields.io/badge/AWS-DynamoDB-4053D6?style=flat&logo=amazondynamodb&logoColor=white)
+![API Gateway](https://img.shields.io/badge/AWS-API_Gateway-FF4F8B?style=flat&logo=amazonapigateway&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-blue?style=flat)
+
+---
+
+## Overview
+
+The Book Review API provides a set of RESTful endpoints for creating, retrieving, and deleting books, as well as submitting and reading reviews tied to specific books. All data is persisted in DynamoDB and served through AWS-managed infrastructure with no servers to maintain.
+
+This project was built as a portfolio piece to demonstrate practical experience with serverless architecture on AWS, including function design, IAM configuration, DynamoDB data modeling with Global Secondary Indexes, and REST API design.
 
 ---
 
@@ -10,395 +24,253 @@ A serverless REST API for managing books and their reviews, built with AWS Lambd
 Client
   │
   ▼
-┌─────────────────────────────────────────┐
-│          API Gateway (REST API)         │
-│          Stage: dev  |  Regional        │
-└──────┬──────────┬──────────┬────────────┘
-       │          │          │
-       ▼          ▼          ▼
-  ┌─────────┐ ┌────────┐ ┌──────────┐
-  │ /books  │ │/books/ │ │/books/   │
-  │  POST   │ │{id}    │ │{id}/     │
-  │  GET    │ │GET     │ │reviews   │
-  └────┬────┘ │DELETE  │ │POST GET  │
-       │      └───┬────┘ └────┬─────┘
-       │          │           │
-       ▼          ▼           ▼
-┌──────────────────────────────────────────┐
-│              AWS Lambda                  │
-│  createBook  getBook   createReview      │
-│  getBooks    deleteBook  getReviews      │
-│        (Node.js 22.x, ES Modules)        │
-└──────────────────┬───────────────────────┘
-                   │
-                   ▼
-        ┌──────────────────────┐
-        │       DynamoDB       │
-        │  ┌────────────────┐  │
-        │  │  Books Table   │  │
-        │  │  PK: bookId    │  │
-        │  └────────────────┘  │
-        │  ┌────────────────┐  │
-        │  │ Reviews Table  │  │
-        │  │  PK: reviewId  │  │
-        │  │  GSI: bookId   │  │
-        │  └────────────────┘  │
-        └──────────────────────┘
+┌─────────────────────────────────┐
+│     API Gateway (REST API)      │
+│         Regional Stage          │
+└────┬──────────┬─────────────────┘
+     │          │
+     ▼          ▼
+┌─────────────────────────────────┐
+│       AWS Lambda Functions      │
+│                                 │
+│  createBook    getBook          │
+│  getBooks      deleteBook       │
+│  createReview  getReviews       │
+│                                 │
+│      (Node.js 22.x / ESM)       │
+└─────────────┬───────────────────┘
+              │
+              ▼
+┌─────────────────────────────────┐
+│           DynamoDB              │
+│                                 │
+│  Books Table   Reviews Table    │
+│                (GSI: bookId)    │
+└─────────────────────────────────┘
 ```
 
 ---
 
-## Prerequisites
+## Tech Stack
 
-- An AWS account with console access
-- A chosen AWS region (these instructions use **us-east-1** as an example — substitute your preferred region throughout)
-
----
-
-## Step 1 — Create DynamoDB Tables
-
-### 1a. Books Table
-
-1. Open the [DynamoDB console](https://console.aws.amazon.com/dynamodb).
-2. Click **Create table**.
-3. Fill in:
-   - **Table name**: `Books`
-   - **Partition key**: `bookId` — type **String**
-4. Under **Table settings**, select **Customize settings**.
-5. Under **Read/write capacity settings**, choose **On-demand**.
-6. Leave all other defaults and click **Create table**.
-
-### 1b. Reviews Table
-
-1. Click **Create table** again.
-2. Fill in:
-   - **Table name**: `Reviews`
-   - **Partition key**: `reviewId` — type **String**
-3. Under **Table settings**, select **Customize settings**.
-4. Under **Read/write capacity settings**, choose **On-demand**.
-5. Scroll to **Global Secondary Indexes** and click **Add index**:
-   - **Partition key**: `bookId` — type **String**
-   - **Index name**: `bookId-index`
-   - **Attribute projections**: All
-   - Click **Create index**.
-6. Click **Create table**.
-
----
-
-## Step 2 — Create the IAM Role
-
-1. Open the [IAM console](https://console.aws.amazon.com/iam).
-2. In the left sidebar click **Roles**, then click **Create role**.
-3. Under **Trusted entity type**, select **AWS service**.
-4. Under **Use case**, select **Lambda**. Click **Next**.
-5. In the permissions search box, attach the following two policies:
-   - `AWSLambdaBasicExecutionRole`
-   - `AmazonDynamoDBFullAccess`
-6. Click **Next**.
-7. Set **Role name**: `lambda-book-review-role`.
-8. Click **Create role**.
-
-> **Note**: `AmazonDynamoDBFullAccess` is used here for simplicity. In production, replace it with a least-privilege custom policy scoped to only the `Books` and `Reviews` tables.
-
----
-
-## Step 3 — Create and Deploy Lambda Functions
-
-Each function is deployed the same way. Repeat these steps for all 6 functions.
-
-### Function list
-
-| Function name  | Handler file location                          | Runtime       |
-|----------------|------------------------------------------------|---------------|
-| `createBook`   | `functions/createBook/index.mjs`               | Node.js 22.x  |
-| `getBooks`     | `functions/getBooks/index.mjs`                 | Node.js 22.x  |
-| `getBook`      | `functions/getBook/index.mjs`                  | Node.js 22.x  |
-| `deleteBook`   | `functions/deleteBook/index.mjs`               | Node.js 22.x  |
-| `createReview` | `functions/createReview/index.mjs`             | Node.js 22.x  |
-| `getReviews`   | `functions/getReviews/index.mjs`               | Node.js 22.x  |
-
-### Steps per function
-
-1. Open the [Lambda console](https://console.aws.amazon.com/lambda).
-2. Click **Create function** → **Author from scratch**.
-3. Fill in:
-   - **Function name**: e.g. `createBook`
-   - **Runtime**: Node.js 22.x
-   - **Architecture**: x86_64
-4. Under **Permissions**, expand **Change default execution role**:
-   - Select **Use an existing role**
-   - Choose `lambda-book-review-role`
-5. Click **Create function**.
-6. In the **Code source** panel, open the inline editor.
-   - Delete the default `index.mjs` content.
-   - Paste the full content of the corresponding `index.mjs` from this project.
-7. Click **Deploy**.
-
-> **AWS SDK v3 note**: `@aws-sdk/client-dynamodb` and `@aws-sdk/lib-dynamodb` are included in the Lambda Node.js managed runtime — no `node_modules` upload or layer is required.
-
----
-
-## Step 4 — Create the API Gateway
-
-1. Open the [API Gateway console](https://console.aws.amazon.com/apigateway).
-2. Click **Create API** → **REST API** (not Private) → **Build**.
-3. Fill in:
-   - **API name**: `book-review-api`
-   - **Endpoint type**: Regional
-4. Click **Create API**.
-
-### 4a. Create Resources and Methods
-
-Build the following resource tree:
-
-```
-/
-├── books                    (resource)
-│   ├── GET   → getBooks
-│   ├── POST  → createBook
-│   └── {bookId}             (resource, path parameter)
-│       ├── GET    → getBook
-│       ├── DELETE → deleteBook
-│       └── reviews          (resource)
-│           ├── GET  → getReviews
-│           └── POST → createReview
-```
-
-#### Create `/books`
-
-1. In the **Resources** panel, select the root `/`.
-2. Click **Create resource**.
-   - **Resource name**: `books`
-   - **Resource path**: `books`
-   - Click **Create resource**.
-
-#### Add GET /books → getBooks
-
-1. Select the `/books` resource.
-2. Click **Create method** → choose **GET** → click the checkmark.
-3. Fill in:
-   - **Integration type**: Lambda Function
-   - **Lambda proxy integration**: **Enabled** (check the box)
-   - **Lambda function**: `getBooks`
-4. Click **Save** and confirm the permission dialog.
-
-#### Add POST /books → createBook
-
-1. Select `/books`, click **Create method** → **POST**.
-2. Same settings as above but **Lambda function**: `createBook`.
-3. Click **Save**.
-
-#### Create `/books/{bookId}`
-
-1. Select `/books`, click **Create resource**.
-   - **Resource name**: `{bookId}` (or label it `bookId`)
-   - **Resource path**: `{bookId}`
-   - Click **Create resource**.
-
-#### Add GET /books/{bookId} → getBook
-
-1. Select `/{bookId}`, click **Create method** → **GET**.
-2. Lambda proxy integration enabled, **Lambda function**: `getBook`.
-3. Click **Save**.
-
-#### Add DELETE /books/{bookId} → deleteBook
-
-1. Select `/{bookId}`, click **Create method** → **DELETE**.
-2. Lambda proxy integration enabled, **Lambda function**: `deleteBook`.
-3. Click **Save**.
-
-#### Create `/books/{bookId}/reviews`
-
-1. Select `/{bookId}`, click **Create resource**.
-   - **Resource name**: `reviews`
-   - **Resource path**: `reviews`
-   - Click **Create resource**.
-
-#### Add GET /books/{bookId}/reviews → getReviews
-
-1. Select `/reviews`, click **Create method** → **GET**.
-2. Lambda proxy integration enabled, **Lambda function**: `getReviews`.
-3. Click **Save**.
-
-#### Add POST /books/{bookId}/reviews → createReview
-
-1. Select `/reviews`, click **Create method** → **POST**.
-2. Lambda proxy integration enabled, **Lambda function**: `createReview`.
-3. Click **Save**.
-
-### 4b. Deploy to the `dev` Stage
-
-1. Click **Deploy API** (top of the Actions menu or the Deploy button).
-2. Under **Deployment stage**, select **[New Stage]**.
-   - **Stage name**: `dev`
-3. Click **Deploy**.
-4. Copy the **Invoke URL** shown — it will look like:
-   ```
-   https://<api-id>.execute-api.<region>.amazonaws.com/dev
-   ```
+| Service | Role |
+|---|---|
+| **AWS Lambda** | Serverless compute — each endpoint is an isolated function with its own handler |
+| **AWS API Gateway** | Exposes Lambda functions as HTTP endpoints, handles routing and stage management |
+| **AWS DynamoDB** | NoSQL database for books and reviews; on-demand billing with a GSI for review lookups |
+| **Node.js 22.x** | Lambda runtime using ES Modules (`.mjs`) for clean, modern JavaScript |
+| **AWS SDK v3** | Modular AWS SDK used across all functions (`@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`) |
 
 ---
 
 ## API Endpoints
 
-| Method | Path                          | Lambda function | Description            |
-|--------|-------------------------------|-----------------|------------------------|
-| POST   | `/books`                      | createBook      | Create a new book      |
-| GET    | `/books`                      | getBooks        | List all books         |
-| GET    | `/books/{bookId}`             | getBook         | Get a single book      |
-| DELETE | `/books/{bookId}`             | deleteBook      | Delete a book          |
-| POST   | `/books/{bookId}/reviews`     | createReview    | Add a review to a book |
-| GET    | `/books/{bookId}/reviews`     | getReviews      | List reviews for a book|
+| Method | Endpoint | Description | Request Body | Response |
+|---|---|---|---|---|
+| `POST` | `/books` | Create a new book | `title`, `author`, `genre` | Created book object |
+| `GET` | `/books` | Get all books | — | Array of book objects |
+| `GET` | `/books/{bookId}` | Get a single book by ID | — | Book object |
+| `DELETE` | `/books/{bookId}` | Delete a book by ID | — | Confirmation message |
+| `POST` | `/books/{bookId}/reviews` | Create a review for a book | `reviewerName`, `rating`, `comment` | Created review object |
+| `GET` | `/books/{bookId}/reviews` | Get all reviews for a book | — | Array of review objects |
 
 ---
 
-## Testing
+## Getting Started
 
-Set your base URL once:
+### Prerequisites
 
-```bash
-BASE_URL="https://<api-id>.execute-api.<region>.amazonaws.com/dev"
+- [AWS Account](https://aws.amazon.com/free/)
+- [Node.js 22.x](https://nodejs.org/)
+- [Postman](https://www.postman.com/downloads/) (optional, for testing)
+- AWS CLI configured with appropriate credentials
+
+---
+
+### 1. DynamoDB Table Setup
+
+Create two tables in DynamoDB via the AWS Console or CLI.
+
+**Books Table**
+
+```
+Table name:    Books
+Partition key: bookId (String)
+Billing mode:  On-demand
+```
+
+**Reviews Table**
+
+```
+Table name:    Reviews
+Partition key: reviewId (String)
+Billing mode:  On-demand
+```
+
+Add a Global Secondary Index (GSI) to the Reviews table to support querying by book:
+
+```
+Index name:    bookId-index
+Partition key: bookId (String)
 ```
 
 ---
 
-### POST /books — Create a book
+### 2. IAM Role Setup
 
-**Request**
-```bash
-curl -X POST "$BASE_URL/books" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"The Pragmatic Programmer","author":"David Thomas","genre":"Technology"}'
-```
+Create an IAM role for Lambda with the following permissions:
 
-**Response — 201 Created**
+- `AWSLambdaBasicExecutionRole` — allows Lambda to write logs to CloudWatch
+- A custom inline policy granting DynamoDB access:
+
 ```json
 {
-  "bookId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "title": "The Pragmatic Programmer",
-  "author": "David Thomas",
-  "genre": "Technology",
-  "createdAt": "2024-01-15T10:30:00.000Z"
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:PutItem",
+        "dynamodb:GetItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:Scan",
+        "dynamodb:Query"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:REGION:ACCOUNT_ID:table/Books",
+        "arn:aws:dynamodb:REGION:ACCOUNT_ID:table/Reviews",
+        "arn:aws:dynamodb:REGION:ACCOUNT_ID:table/Reviews/index/bookId-index"
+      ]
+    }
+  ]
 }
 ```
 
-**Error — 400 Bad Request** (missing fields)
-```json
-{ "message": "title, author, and genre are required" }
-```
+Replace `REGION` and `ACCOUNT_ID` with your values.
 
 ---
 
-### GET /books — List all books
+### 3. Lambda Function Deployment
 
-**Request**
-```bash
-curl "$BASE_URL/books"
-```
+For each function in `functions/`:
 
-**Response — 200 OK**
-```json
-[
-  {
-    "bookId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "title": "The Pragmatic Programmer",
-    "author": "David Thomas",
-    "genre": "Technology",
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  }
-]
-```
+1. Zip the function directory (e.g., `zip -j createBook.zip functions/createBook/index.mjs`)
+2. Create a Lambda function in the AWS Console:
+   - **Runtime:** Node.js 22.x
+   - **Handler:** `index.handler`
+   - **Execution role:** the IAM role created above
+3. Upload the zip file as the function code
+
+Repeat for all six functions: `createBook`, `getBooks`, `getBook`, `deleteBook`, `createReview`, `getReviews`.
 
 ---
 
-### GET /books/{bookId} — Get a single book
+### 4. API Gateway Configuration
+
+1. Create a new **REST API** in API Gateway
+2. Create the following resources and methods, each integrated with the corresponding Lambda function:
+
+| Resource | Method | Lambda Function |
+|---|---|---|
+| `/books` | `POST` | `createBook` |
+| `/books` | `GET` | `getBooks` |
+| `/books/{bookId}` | `GET` | `getBook` |
+| `/books/{bookId}` | `DELETE` | `deleteBook` |
+| `/books/{bookId}/reviews` | `POST` | `createReview` |
+| `/books/{bookId}/reviews` | `GET` | `getReviews` |
+
+3. Enable **Lambda Proxy Integration** for each method
+4. Deploy the API to a stage (e.g., `dev`)
+5. Copy the generated **Invoke URL** — this is your `baseUrl`
+
+---
+
+### 5. Postman Collection
+
+A ready-to-use Postman collection is included at `book-review-api.postman_collection.json`.
+
+1. Open Postman and click **Import**
+2. Select `book-review-api.postman_collection.json`
+3. Open the collection and go to **Variables**
+4. Set `baseUrl` to your API Gateway Invoke URL
+5. Run **Create Book** first — the test script automatically saves the returned `bookId` to the `bookId` collection variable, which all subsequent requests use
+
+---
+
+## Example Requests & Responses
+
+### POST /books
 
 **Request**
-```bash
-BOOK_ID="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-curl "$BASE_URL/books/$BOOK_ID"
-```
+```http
+POST /books
+Content-Type: application/json
 
-**Response — 200 OK**
-```json
 {
-  "bookId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "title": "The Pragmatic Programmer",
-  "author": "David Thomas",
-  "genre": "Technology",
-  "createdAt": "2024-01-15T10:30:00.000Z"
+  "title": "Dune",
+  "author": "Frank Herbert",
+  "genre": "Sci-Fi"
 }
 ```
 
-**Error — 404 Not Found**
-```json
-{ "message": "Book not found" }
-```
-
----
-
-### DELETE /books/{bookId} — Delete a book
-
-**Request**
-```bash
-BOOK_ID="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-curl -X DELETE "$BASE_URL/books/$BOOK_ID"
-```
-
-**Response — 200 OK**
-```json
-{ "message": "Book a1b2c3d4-e5f6-7890-abcd-ef1234567890 deleted successfully" }
-```
-
----
-
-### POST /books/{bookId}/reviews — Create a review
-
-**Request**
-```bash
-BOOK_ID="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-curl -X POST "$BASE_URL/books/$BOOK_ID/reviews" \
-  -H "Content-Type: application/json" \
-  -d '{"reviewerName":"Jane Smith","rating":5,"comment":"An essential read for every developer."}'
-```
-
-**Response — 201 Created**
+**Response** `201 Created`
 ```json
 {
-  "reviewId": "f9e8d7c6-b5a4-3210-fedc-ba9876543210",
-  "bookId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "reviewerName": "Jane Smith",
+  "bookId": "a3f2c1d0-8e4b-4f7a-b6c2-1d9e0f3a5b8c",
+  "title": "Dune",
+  "author": "Frank Herbert",
+  "genre": "Sci-Fi",
+  "createdAt": "2026-03-06T12:00:00.000Z"
+}
+```
+
+---
+
+### POST /books/{bookId}/reviews
+
+**Request**
+```http
+POST /books/a3f2c1d0-8e4b-4f7a-b6c2-1d9e0f3a5b8c/reviews
+Content-Type: application/json
+
+{
+  "reviewerName": "Jane Doe",
   "rating": 5,
-  "comment": "An essential read for every developer.",
-  "createdAt": "2024-01-15T11:00:00.000Z"
+  "comment": "An absolute masterpiece. One of the greatest sci-fi novels ever written."
 }
 ```
 
-**Error — 400 Bad Request** (invalid rating)
+**Response** `201 Created`
 ```json
-{ "message": "rating must be a number between 1 and 5" }
+{
+  "reviewId": "d7b1e2f4-3a5c-4d8e-9f0b-2c6a1e4d7f3b",
+  "bookId": "a3f2c1d0-8e4b-4f7a-b6c2-1d9e0f3a5b8c",
+  "reviewerName": "Jane Doe",
+  "rating": 5,
+  "comment": "An absolute masterpiece. One of the greatest sci-fi novels ever written.",
+  "createdAt": "2026-03-06T12:05:00.000Z"
+}
 ```
 
 ---
 
-### GET /books/{bookId}/reviews — Get reviews for a book
+### GET /books/{bookId}/reviews
 
 **Request**
-```bash
-BOOK_ID="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-curl "$BASE_URL/books/$BOOK_ID/reviews"
+```http
+GET /books/a3f2c1d0-8e4b-4f7a-b6c2-1d9e0f3a5b8c/reviews
 ```
 
-**Response — 200 OK**
+**Response** `200 OK`
 ```json
 [
   {
-    "reviewId": "f9e8d7c6-b5a4-3210-fedc-ba9876543210",
-    "bookId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "reviewerName": "Jane Smith",
+    "reviewId": "d7b1e2f4-3a5c-4d8e-9f0b-2c6a1e4d7f3b",
+    "bookId": "a3f2c1d0-8e4b-4f7a-b6c2-1d9e0f3a5b8c",
+    "reviewerName": "Jane Doe",
     "rating": 5,
-    "comment": "An essential read for every developer.",
-    "createdAt": "2024-01-15T11:00:00.000Z"
+    "comment": "An absolute masterpiece. One of the greatest sci-fi novels ever written.",
+    "createdAt": "2026-03-06T12:05:00.000Z"
   }
 ]
 ```
@@ -422,17 +294,13 @@ book-review-api/
 │   │   └── index.mjs
 │   └── getReviews/
 │       └── index.mjs
-├── docs/
-│   └── README.md         ← you are here
-└── table-schemas.json
+├── book-review-api.postman_collection.json
+├── testData.json
+└── README.md
 ```
 
 ---
 
-## IAM Role Summary
+## License
 
-| Field          | Value                          |
-|----------------|--------------------------------|
-| Role name      | `lambda-book-review-role`      |
-| Trusted entity | `lambda.amazonaws.com`         |
-| Policies       | `AWSLambdaBasicExecutionRole`, `AmazonDynamoDBFullAccess` |
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
